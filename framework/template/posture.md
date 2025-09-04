@@ -17,37 +17,49 @@
 {{ if $finding.Results }}
 {{- $hasFailedRules := false }}
 {{- $hasPassedRules := false }}
+{{- $hasWaivedRules := false }}
 
 {{- range $ruleResult := $finding.Results}}
 {{- $hasFailure := false }}
+{{- $isWaived := false }}
 {{- range $subj := $ruleResult.Subjects}}
 {{- range $prop := $subj.Props}}
 {{- if and (eq $prop.Name "result") (eq $prop.Value "fail") }}
 {{- $hasFailure = true }}
 {{- end}}
+{{- if and (eq $prop.Name "waived") (eq $prop.Value "true") }}
+{{- $isWaived = true }}
 {{- end}}
 {{- end}}
-{{- if $hasFailure}}
+{{- end}}
+{{- if $isWaived}}
+{{- $hasWaivedRules = true }}
+{{- else if $hasFailure}}
 {{- $hasFailedRules = true }}
 {{- else}}
 {{- $hasPassedRules = true }}
 {{- end}}
 {{- end}}
 
-{{- if $hasFailedRules}}
+{{- if or $hasFailedRules $hasWaivedRules}}
 <details open>
 <summary> Failed Rules</summary>
 
+{{- if $hasFailedRules}}
 {{- range $ruleResult := $finding.Results}}
 {{- $hasFailure := false }}
+{{- $isWaived := false }}
 {{- range $subj := $ruleResult.Subjects}}
 {{- range $prop := $subj.Props}}
 {{- if and (eq $prop.Name "result") (eq $prop.Value "fail") }}
 {{- $hasFailure = true }}
 {{- end}}
+{{- if and (eq $prop.Name "waived") (eq $prop.Value "true") }}
+{{- $isWaived = true }}
 {{- end}}
 {{- end}}
-{{- if $hasFailure}}
+{{- end}}
+{{- if and $hasFailure (not $isWaived)}}
 
 **Rule ID:** {{$ruleResult.RuleId}}
 
@@ -78,6 +90,64 @@
 </details>
 {{- end}}
 {{- end}}
+{{- end}}
+
+{{- if $hasWaivedRules}}
+<details open>
+<summary> Waived Rules</summary>
+
+{{- range $ruleResult := $finding.Results}}
+{{- $hasFailure := false }}
+{{- $isWaived := false }}
+{{- range $subj := $ruleResult.Subjects}}
+{{- range $prop := $subj.Props}}
+{{- if and (eq $prop.Name "result") (eq $prop.Value "fail") }}
+{{- $hasFailure = true }}
+{{- end}}
+{{- if and (eq $prop.Name "waived") (eq $prop.Value "true") }}
+{{- $isWaived = true }}
+{{- end}}
+{{- end}}
+{{- end}}
+{{- if $isWaived}}
+
+**Rule ID:** {{$ruleResult.RuleId}}
+{{- if not $hasFailure}} **(Unexpectedly Passed)**{{- end}}
+
+<details open>
+<summary>Waived Rule Details</summary>
+{{- range $subj := $ruleResult.Subjects}}
+
+- **Subject UUID:** {{$subj.SubjectUuid}}
+- **Title:** {{$subj.Title}}
+{{- range $prop := $subj.Props}}
+{{- if eq $prop.Name "result"}}
+
+  - **Result: {{$prop.Value}}**{{if not $hasFailure}}  **(Expected to fail but passed)**{{end}}
+{{- end}}
+
+{{- if eq $prop.Name "waived"}}
+  - **Waived: {{$prop.Value}}**
+{{- end}}
+
+{{- if eq $prop.Name "reason"}}
+    <details open>
+    <summary>{{if $hasFailure}}Waiver Details{{else}}Reason for Unexpected Pass{{end}}</summary>
+
+    ```
+    {{ newline_with_indent $prop.Value 4}}
+    ```
+
+    </details>
+{{- end}}
+{{- end}}
+{{- end}}
+</details>
+{{- end}}
+{{- end}}
+</details>
+{{- end}}
+
 </details>
 {{- end}}
 
@@ -87,14 +157,18 @@
 
 {{- range $ruleResult := $finding.Results}}
 {{- $hasFailure := false }}
+{{- $isWaived := false }}
 {{- range $subj := $ruleResult.Subjects}}
 {{- range $prop := $subj.Props}}
 {{- if and (eq $prop.Name "result") (eq $prop.Value "fail") }}
 {{- $hasFailure = true }}
 {{- end}}
+{{- if and (eq $prop.Name "waived") (eq $prop.Value "true") }}
+{{- $isWaived = true }}
 {{- end}}
 {{- end}}
-{{- if not $hasFailure}}
+{{- end}}
+{{- if and (not $hasFailure) (not $isWaived)}}
 
 **Rule ID:** {{$ruleResult.RuleId}}
 
