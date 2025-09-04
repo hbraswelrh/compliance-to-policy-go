@@ -15,8 +15,10 @@
 #### Result of control: {{$finding.ControlID}}
 
 {{ if $finding.Results }}
+{{- $hasFailedRules := false }}
+{{- $hasPassedRules := false }}
+
 {{- range $ruleResult := $finding.Results}}
-Rule ID: {{$ruleResult.RuleId}}
 {{- $hasFailure := false }}
 {{- range $subj := $ruleResult.Subjects}}
 {{- range $prop := $subj.Props}}
@@ -25,49 +27,110 @@ Rule ID: {{$ruleResult.RuleId}}
 {{- end}}
 {{- end}}
 {{- end}}
+{{- if $hasFailure}}
+{{- $hasFailedRules = true }}
+{{- else}}
+{{- $hasPassedRules = true }}
+{{- end}}
+{{- end}}
 
-<details{{if $hasFailure}} open{{end}}>
+{{- if $hasFailedRules}}
+<details open>
+<summary> Failed Rules</summary>
 
-<summary>{{if $hasFailure}}Failed Rule Details{{else}}Rule Details{{end}}</summary>
+{{- range $ruleResult := $finding.Results}}
+{{- $hasFailure := false }}
+{{- range $subj := $ruleResult.Subjects}}
+{{- range $prop := $subj.Props}}
+{{- if and (eq $prop.Name "result") (eq $prop.Value "fail") }}
+{{- $hasFailure = true }}
+{{- end}}
+{{- end}}
+{{- end}}
+{{- if $hasFailure}}
+
+**Rule ID:** {{$ruleResult.RuleId}}
+
+<details open>
+<summary>Failed Rule Details</summary>
 {{- range $subj := $ruleResult.Subjects}}
 
-- Subject UUID: {{$subj.SubjectUuid}}
-- Title: {{$subj.Title}}
+- **Subject UUID:** {{$subj.SubjectUuid}}
+- **Title:** {{$subj.Title}}
 {{- range $prop := $subj.Props}}
 {{- if eq $prop.Name "result"}}
-{{- if eq $prop.Value "fail"}}
 
   - **Result: {{$prop.Value}}**
-{{- else if eq $prop.Value "pass"}}
-
-  - **Result: {{$prop.Value}}**
-{{- else}}
-
-  - **Result: {{$prop.Value}}**
-{{- end}}
 {{- end}}
 
 {{- if eq $prop.Name "reason"}}
-    <details{{if $hasFailure}} open{{end}}>
-    <summary>{{if $hasFailure}}Failure Reason{{else}}Details{{end}}</summary>
-    - Reason:
+    <details open>
+    <summary>Failure Reason</summary>
 
-      ```
-
-      {{ newline_with_indent $prop.Value 6}}
-      ```
+    ```
+    {{ newline_with_indent $prop.Value 4}}
+    ```
 
     </details>
+{{- end}}
+{{- end}}
+{{- end}}
+</details>
+{{- end}}
+{{- end}}
+</details>
+{{- end}}
 
+{{- if $hasPassedRules}}
+<details>
+<summary> Passed Rules</summary>
+
+{{- range $ruleResult := $finding.Results}}
+{{- $hasFailure := false }}
+{{- range $subj := $ruleResult.Subjects}}
+{{- range $prop := $subj.Props}}
+{{- if and (eq $prop.Name "result") (eq $prop.Value "fail") }}
+{{- $hasFailure = true }}
 {{- end}}
 {{- end}}
 {{- end}}
-  </details>
+{{- if not $hasFailure}}
+
+**Rule ID:** {{$ruleResult.RuleId}}
+
+<details>
+<summary>Passed Rule Details</summary>
+{{- range $subj := $ruleResult.Subjects}}
+
+- **Subject UUID:** {{$subj.SubjectUuid}}
+- **Title:** {{$subj.Title}}
+{{- range $prop := $subj.Props}}
+{{- if eq $prop.Name "result"}}
+
+  - **Result: {{$prop.Value}}**
 {{- end}}
+
+{{- if eq $prop.Name "reason"}}
+    <details>
+    <summary>Details</summary>
+
+    ```
+    {{ newline_with_indent $prop.Value 4}}
+    ```
+
+    </details>
+{{- end}}
+{{- end}}
+{{- end}}
+</details>
+{{- end}}
+{{- end}}
+</details>
 {{- end}}
 {{- end}}
 {{- else}}
 
 No Findings.
+{{- end}}
 {{- end}}
 {{- end}}
